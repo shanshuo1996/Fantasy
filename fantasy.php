@@ -5,34 +5,55 @@ class Fantasy {
     static function convert_https($url){
         return preg_replace("/^http:/", "https:", $url);
     }
+    
+    static function get_img($url){
+        $ch = curl_init();
+        curl_setopt ($ch, CURLOPT_URL, $url);
+        curl_setopt ($ch, CURLOPT_TIMEOUT,0);
+        curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt ($ch, CURLOPT_REFERER, "http://www.bilibili.com/");
+        $str = curl_exec ($ch);
+        $info = curl_getinfo($ch,CURLINFO_CONTENT_TYPE);
+        curl_close ($ch);
+        $httpContentType = $info['content_type'];
+        $base_64 = base64_encode($str);
+        
+        return "data:{$httpContentType};base64,{$base_64}";
+    }
 
     // 追番
     static function bangumi($t){
         $uid = Typecho_Widget::widget('Widget_Options') -> bgm_user;
         $uid = $uid ? $uid : 742725;
-        $bgm = file_get_contents("https://space.bilibili.com/" . $uid . "/bangumi");
+        $bgm = file_get_contents("https://api.bilibili.com/x/space/bangumi/follow/list?type=1&pn=1&vmid=" . $uid);
         $bgm = json_decode($bgm);
 
         if($bgm){
-            foreach($bgm as $item){
-                $bid  = $item -> subject -> id;
-                $name = $item -> subject -> name_cn ? $item -> subject -> name_cn : $item -> subject -> name;
-                $seem = $item -> ep_status;
-                $image = self::convert_https($item -> subject -> images -> large);
-                $total = property_exists($item -> subject, "eps_count") ? $item -> subject -> eps_count : $seem;
+            $data = $bgm->data;
+            $pn = $bgm-> pn;
+            $ps = $bgm-> ps;
+            $total = $bgm-> total;
+            foreach($data->list as $item){
+                $bid  = $item -> season_id;
+                $name = $item -> title;
+                $seem = 1;
+                $image = self::convert_https($item -> cover);
+                $total = $item -> stat -> season_status;
                 $width = (int)$seem / $total * 100;
-?>
-                    <div class="col-6 col-m-4">
-                        <a class="bangumi-item" target="_blank" href="https://bgm.tv/subject/<?php echo $bid ?>">
-                            <div class="bangumi-img" style="background-image: url(<?php echo $image ?>)">
-                                <div class="bangumi-status">
-                                    <div class="bangumi-status-bar" style="width: <?php echo $width ?>%"></div>
-                                    <p>进度：<?php echo $seem ?> / <?php echo $total ?></p>
-                                </div>
-                            </div>
-                            <h3><?php echo $name ?></h3>
-                        </a>
-                    </div>
+                $img = self::get_img($image);
+                ?>
+
+                <div class="col-6 col-m-4">
+                <a class="bangumi-item" target="_blank" href="https://www.bilibili.com/bangumi/play/ss<?php echo $bid ?>">
+                <div class="bangumi-img" style="background-image: url(<?php echo $img ?>)">
+                <div class="bangumi-status">
+                <div class="bangumi-status-bar" style="width: <?php echo $width ?>%"></div>
+                <p>进度：<?php echo $seem ?> / <?php echo $total ?></p>
+                </div>
+                </div>
+                <h3><?php echo $name ?></h3>
+                </a>
+                </div>
 <?php
             }
         }
