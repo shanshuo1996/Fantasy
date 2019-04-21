@@ -9,8 +9,8 @@ class Fantasy {
     // 追番
     static function bangumi($t){
         $uid = Typecho_Widget::widget('Widget_Options') -> bgm_user;
-        $uid = $uid ? $uid : 433599;
-        $bgm = file_get_contents("https://api.bgm.tv/user/" . $uid . "/collection?cat=playing");
+        $uid = $uid ? $uid : 742725;
+        $bgm = file_get_contents("https://space.bilibili.com/" . $uid . "/bangumi");
         $bgm = json_decode($bgm);
 
         if($bgm){
